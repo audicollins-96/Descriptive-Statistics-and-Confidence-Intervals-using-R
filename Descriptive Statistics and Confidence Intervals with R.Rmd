@@ -1,0 +1,229 @@
+---
+title: "Descriptive Statistics"
+author: "Collins Audi"
+date: "2025-09-26"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**About the Dataset**: The Whitehall FoSSA Study is a simulated cohort study similar to the original Whitehall Study of Civil Servants, set up in the 1960s, which followed London-based male civil servants with a view to investigating cardiovascular disease and mortality. Participants from the original Whitehall cohort in the 1960s were flagged for mortality at the Office for National Statistics, which provided the date and cause of all deaths occurring until the end of September 2005. The (simulated) Whitehall FoSSA Study was conducted in 1997 to assess risk factors for cardiac and all-cause mortality in a subset of the original cohort that was still being followed. The Whitehall FoSSA Study contains information on 4,327 individuals that were followed-up from 1997 until 2005, and the variables are summarised in the table below. See Clarke et al. (2007), Arch Intern Med, 167(13) for more details on the real data that inspired this dataset.
+
+Importation of data using the relative file path method, enabled by the here and rio packages in r. 
+```{r}
+#Data Importation
+whitehall <- read.csv("C:/Users/audic/Desktop/Fossa/module1/Whitehall_fossa.csv", header = TRUE, sep =',')
+head(whitehall)
+```
+Data Checking: Commands used to inspect the structure and dimensions of the dataset
+```{r}
+#Data Checking
+names(whitehall) #Column names
+str(whitehall) #dataset structure
+nrow(whitehall) #number of rows in the dataset
+ncol(whitehall) #number of columns in the dataset
+
+dim(whitehall)
+```
+
+Current Smoker (currsmoker): Factor variable indicating whether a participant currently smokes.
+
+Levels: No = 0 (non-smoker), Yes = 1 (current smoker)
+```{r}
+#Creating categories for smoking status
+whitehall$currsmoker <- factor(whitehall$currsmoker, levels = 0:1, labels = c("No", "Yes"))
+head(whitehall$currsmoker)
+```
+The BMI variable is categorized into four groups, with a summary showing the number of participants in each category and its structure identified as a factor with four levels.
+
+```{r}
+table(whitehall$bmi_grp4) #Creating a Table for BMI groups
+str(whitehall$bmi_grp4) #Inspecting structure of the dataset
+```
+A new column was created to categorize participants based on BMI. Initially empty, it was filled with 0 for those with BMI below 30 and 1 for those with BMI 30 or above. This numeric coding was then converted into a factor with two categories, labeling participants as “Not obese” or “obese.”
+```{r}
+#Creating a new empty column
+whitehall$bmi.2 <- whitehall$bmi
+
+whitehall$bmi.2 <- NA
+
+#Assigning 0 and 1 based ranges
+whitehall$bmi.2[whitehall$bmi<30] <- 0
+whitehall$bmi.2[whitehall$bmi>=30] <- 1
+
+#Creating categories
+whitehall$bmi.2 <- factor(whitehall$bmi.2, labels = c("Not obese","obese"))
+head(whitehall$bmi.2)
+```
+
+A new column was created to categorize LDL cholesterol levels, coding values ≤4 as 0 and values >4 as 1, then converting it into a factor with the categories “4 or below” and “above 4.”
+```{r}
+#Creating new empty column (low density lipoprotein cholesterol level)
+whitehall$ldl2 <- whitehall$ldlc
+whitehall$ldl2 <- NA
+
+#Assigning codes to various ldl ranges
+whitehall$ldl2[whitehall$ldlc<=4] <- 0
+whitehall$ldl2[whitehall$ldlc>4] <- 1
+
+#Creating categories
+whitehall$ldl2 <- factor(whitehall$ldl2, labels = c("4 or below", "above 4"))
+```
+Descriptive statistics were calculated for the dataset to summarize key variables. Measures of central tendency and spread were obtained for continuous variables such as systolic blood pressure and cholesterol, including mean, median, mode, quartiles, interquartile range, minimum, maximum, and standard deviation. Variables were also inspected for their type and classification, identifying them as binary, continuous, or ordinal, and conversions to numeric were performed where necessary to facilitate analysis.
+```{r}
+#Descriptive Statistics
+summary(whitehall)
+by(whitehall, whitehall$age_grp, summary)
+mean1 <- mean(as.numeric(whitehall$sbp), na.rm = TRUE)
+mean1
+
+median1 <- median(as.numeric(whitehall$sbp), na.rm = TRUE)
+median1
+
+#First and Third QUartile
+first_tquat <- quantile(as.numeric(whitehall$sbp), probs=0.25, na.rm=TRUE)
+first_tquat
+
+third_tquat <- quantile(as.numeric(whitehall$sbp), probs=0.75, na.rm=TRUE)
+third_tquat
+
+#Interquartile Range
+IQR = third_tquat - first_tquat
+
+whitehall$sbp <- as.numeric(whitehall$sbp)
+IQR(whitehall$sbp, na.rm = TRUE)
+
+class(whitehall$sbp)
+
+stats::IQR(whitehall$sbp, na.rm = TRUE)
+
+#Variable Class
+class(whitehall$prior_cvd)   #numeric
+class(whitehall$sbp)         #numeric
+class(whitehall$frailty)    #numeric
+class(whitehall$death)      #numeric
+
+#Converting the class for cholesterol to numeric
+whitehall$chol <- as.numeric(whitehall$chol)
+
+#DescTools for Mode
+library(DescTools)
+Mode(whitehall$chol, na.rm=TRUE)
+
+#Maximym and Minimum values
+max(whitehall$chol, na.rm=TRUE)
+min(whitehall$chol, na.rm=TRUE)
+
+#Standard Deviation
+sd(whitehall$chol, na.rm=TRUE)
+```
+
+Visualizations were created to explore the distribution of key variables in the dataset. BMI was represented using both bar plots and histograms to show the number of participants across individual values and grouped categories, with color gradients enhancing visual distinction. BMI was also grouped into standard categories, and a corresponding bar plot highlighted the frequency of participants in each BMI range. Similarly, systolic blood pressure (SBP) was categorized into clinical groups, from normotensive to stage 2 hypertension, and visualized with histograms to examine its distribution. Different bin widths were used in SBP histograms to provide both detailed and broader views of the data. Overall, these plots allow a clear visual summary of participant characteristics and the spread of measurements.
+```{r}
+library(tidyverse)
+library(RColorBrewer)
+
+bmi.counts <- table(whitehall$bmi)
+
+whitehall$bmi <- as.numeric(whitehall$bmi)
+
+#BMI Bar Plot
+
+barplot(bmi.counts, xlab = "BMI", ylab = "Number of people", main = "BMI of WHitehall Participants", col=heat.colors(40))
+
+hist(whitehall$bmi, xlab ="BMI", ylab = "Number of people", main = "BMI of Whitehall Participants", col=heat.colors(20), density=150)
+
+#Creating a new empty BMI Column
+whitehall$bmi.grouped <- NA
+
+#Grouping Body Mass Index
+whitehall$bmi.grouped [whitehall$bmi<18.5] <- 0
+whitehall$bmi.grouped[whitehall$bmi>=18.5 & whitehall$bmi<25] <- 1
+whitehall$bmi.grouped[whitehall$bmi>=25 & whitehall$bmi<30] <-2
+whitehall$bmi.grouped [whitehall$bmi>=30] <-3
+
+class(whitehall$bmi.grouped)
+
+#Creating Categories
+whitehall$bmi.grouped <- factor (whitehall$bmi.grouped, levels = 0:3, labels=c("<18.5", "18.5-24.9", "25-29.9", ">30"))
+
+bmi.grouped.graph <- table(whitehall$bmi.grouped)
+barplot (bmi.grouped.graph, horiz = FALSE, xlab = "BMI", ylab = "Number of people", main = "BMI of whitehall Participants", col=heat.colors(4))
+
+#Creating a new empty column
+whitehall$sbp.grouped <- NA
+
+#Grouping sbp
+whitehall$sbp.grouped[whitehall$sbp<120] <- 1
+whitehall$sbp.grouped[whitehall$sbp>=120 & whitehall$sbp<130] <-2
+whitehall$sbp.grouped[whitehall$sbp>=130 & whitehall$sbp<140] <-3
+whitehall$sbp.grouped[whitehall$sbp>=140] <- 4
+
+#Creating hypertension categories
+whitehall$sbp.grouped <- factor(whitehall$sbp.grouped, levels = 1:4, labels=c("Normotensive", "Elevated", "Stage 1 Hypertension", "Stage 2 Hypertension"))
+
+#Plotting a histogram of systolic blood pressure
+hist(whitehall$sbp, xlab = "SBP", ylab = "Number of people", main = "Histogram of SBP of Whitehall Participants", col=heat.colors(12), density=100, breaks = 1000)
+
+#Plotting histogram of systolic blood pressure with larger bins
+hist(whitehall$sbp, xlab = "SBP", ylab = "Number of people", main = "Histogram of SBP Whitehall participants", col=heat.colors(12), density=100, breaks = 10)
+
+```
+
+Calculation of standard errors, standard devistions and confidence intervals
+
+```{r}
+#Standard Deviation
+sbp.n <- sum(!is.na(whitehall$sbp))
+sbp.sd <- sd(as.numeric(whitehall$sbp), na.rm=TRUE)
+sbp.sd
+
+whitehall$sbp <- as.numeric(whitehall$sbp)
+
+#Standard Error of Sampling Statistics
+sbp.se <- sbp.sd/sqrt(sbp.n)
+
+round (sbp.se, 3)
+
+Za <- qnorm (0.975)
+
+sbp.mean <- mean(whitehall$sbp, na.rm=TRUE)
+sbp.mean
+
+ci.Z_SBP <- c(sbp.mean - (sbp.sd/sqrt(sbp.n)*Za), sbp.mean + (sbp.sd/sqrt(sbp.n)*Za))
+
+ci.Z_SBP
+
+Za <- qnorm (0.975)
+
+BMI.n <- sum(!is.na(whitehall$bmi))
+
+whitehall$bmi <- as.numeric(whitehall$bmi)
+
+BMI.sd <- sd(whitehall$bmi, na.rm = T )
+
+BMI.mean <- mean(whitehall$bmi, na.rm = T)
+
+ci.Z_BMI <- c(BMI.mean - (BMI.sd/sqrt(BMI.n)*Za), BMI.mean + (BMI.sd/sqrt(BMI.n)*Za))
+
+ci.Z_BMI
+
+#99% CI for BMI
+Za <- qnorm (0.995)
+
+BMI.n <- sum(!is.na(whitehall$bmi))
+
+BMI.sd <- sd(whitehall$bmi, na.rm = T )
+
+BMI.mean <- mean(whitehall$bmi, na.rm = T)
+
+ci.Z_BMI <- c(BMI.mean - (BMI.sd/sqrt(BMI.n)*Za), BMI.mean + (BMI.sd/sqrt(BMI.n)*Za))
+
+ci.Z_BMI
+```
+
